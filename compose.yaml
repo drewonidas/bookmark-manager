@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: docker.io/library/postgres:16-alpine
+    container_name: bookmark_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bookmark_user
+      POSTGRES_PASSWORD: bookmark_secret
+      POSTGRES_DB: bookmark_sanctuary
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookmark_user -d bookmark_sanctuary"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
