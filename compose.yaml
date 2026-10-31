@@ -17,5 +17,37 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: .
+      dockerfile: Containerfile
+    container_name: bookmark_backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      PORT: 3001
+      HOST: 0.0.0.0
+      NODE_ENV: production
+      CORS_ORIGIN: http://localhost:3000
+      AUTH_TOKEN: sanctuary-secret-token-change-me
+      DATABASE_URL: postgresql://bookmark_user:bookmark_secret@postgres:5432/bookmark_sanctuary
+    ports:
+      - "3001:3001"
+
+  frontend:
+    build:
+      context: ../Bookmark-manager-UI
+      dockerfile: Containerfile
+    container_name: bookmark_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: http://backend:3001
+      VITE_AUTH_TOKEN: sanctuary-secret-token-change-me
+    ports:
+      - "3000:3000"
+
 volumes:
   postgres_data:

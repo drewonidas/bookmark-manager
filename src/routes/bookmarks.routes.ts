@@ -114,6 +114,7 @@ export const bookmarksRoutes: FastifyPluginAsync = async (fastify) => {
     // Map highlights count for frontend convenience
     const formatted = items.map((b) => ({
       ...b,
+      savedAgo: b.savedAgo || 'Just now',
       highlightsCount: b.highlights?.length || 0,
     }));
 
@@ -216,6 +217,8 @@ export const bookmarksRoutes: FastifyPluginAsync = async (fastify) => {
         isArchived: Boolean(body.isArchived),
         isRead: Boolean(body.isRead),
         readProgressPercent: Number(body.readProgressPercent) || 0,
+        remainingMinutes: body.remainingMinutes !== undefined ? Number(body.remainingMinutes) : Number(readTimeMinutes) || 5,
+        savedAgo: body.savedAgo || 'Just now',
         curatorNote: body.curatorNote,
         fullContentHtml: fullContentHtml,
         aiSummary: aiSummary,
@@ -223,7 +226,11 @@ export const bookmarksRoutes: FastifyPluginAsync = async (fastify) => {
       })
       .returning();
 
-    return reply.code(201).send(inserted);
+    return reply.code(201).send({
+      ...inserted,
+      savedAgo: inserted.savedAgo || 'Just now',
+      highlightsCount: 0,
+    });
   });
 
   // 4. Batch Operations (archive, favorite, delete)

@@ -17,8 +17,23 @@ export async function generateBookmarkSynthesis(params: {
   excerpt?: string;
   content?: string;
 }): Promise<AISummaryResult | null> {
+  const buildFallbackSynthesis = (): AISummaryResult => {
+    const cleanExcerpt = (params.excerpt || params.title).replace(/\s+/g, ' ').trim();
+    return {
+      summary: cleanExcerpt.length > 30
+        ? cleanExcerpt
+        : `Editorial synthesis of "${params.title}", highlighting its primary arguments and structural insights.`,
+      keyTakeaways: [
+        `Core premise centered on ${params.title}.`,
+        cleanExcerpt.slice(0, 140) + (cleanExcerpt.length > 140 ? '...' : ''),
+        'Saved for deliberate reading and long-term archival reference.',
+      ],
+      suggestedTags: ['#editorial', '#deep-reading'],
+    };
+  };
+
   if (!genAiClient) {
-    return null;
+    return buildFallbackSynthesis();
   }
 
   const textToAnalyze = params.content?.slice(0, 15000) || params.excerpt || params.title;
@@ -45,7 +60,7 @@ Do not enclose in markdown code fences. Output only valid JSON.`;
     });
 
     const outputText = response.output_text?.trim();
-    if (!outputText) return null;
+    if (!outputText) return buildFallbackSynthesis();
 
     // Clean any accidental markdown fence
     const cleanJson = outputText.replace(/^```(json)?/i, '').replace(/```$/, '').trim();
@@ -59,7 +74,7 @@ Do not enclose in markdown code fences. Output only valid JSON.`;
         : [],
     };
   } catch (error) {
-    console.error('Gemini synthesis error:', error);
-    return null;
+    console.error('Gemini synthesis error, using editorial fallback:', error);
+    return buildFallbackSynthesis();
   }
 }

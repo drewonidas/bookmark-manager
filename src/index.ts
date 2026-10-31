@@ -25,7 +25,7 @@ async function main() {
 
   // 2. CORS configuration for frontend
   await app.register(cors, {
-    origin: [env.CORS_ORIGIN, 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -83,11 +83,19 @@ async function main() {
     });
   }
 
-  // Run database migration check
-  try {
-    await runMigrations();
-  } catch (dbErr) {
-    app.log.warn({ err: dbErr }, 'Database table migration deferred or failed. Verify PostgreSQL is running.');
+  // Run database migration check with retry for container startup
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      await runMigrations();
+      break;
+    } catch (dbErr) {
+      if (attempt === 5) {
+        app.log.warn({ err: dbErr }, 'Database table migration deferred or failed. Verify PostgreSQL is running.');
+      } else {
+        app.log.info(`Waiting for PostgreSQL (attempt ${attempt}/5)...`);
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
   }
 
   // Start Server
