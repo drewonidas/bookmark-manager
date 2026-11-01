@@ -339,10 +339,20 @@ export const bookmarksRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(404).send({ error: 'Bookmark not found' });
     }
 
+    let fullContentHtml = item.fullContentHtml;
+    if (item.url && (!fullContentHtml || !fullContentHtml.includes('reader-extracted-root'))) {
+      try {
+        const extracted = await extractArticleFromUrl(item.url);
+        if (extracted.fullContentHtml) {
+          fullContentHtml = extracted.fullContentHtml;
+        }
+      } catch {}
+    }
+
     const aiResult = await generateBookmarkSynthesis({
       title: item.title,
       excerpt: item.excerpt || undefined,
-      content: item.fullContentHtml || undefined,
+      content: fullContentHtml || undefined,
     });
 
     if (!aiResult) {
@@ -352,6 +362,7 @@ export const bookmarksRoutes: FastifyPluginAsync = async (fastify) => {
     const [updated] = await db
       .update(bookmarks)
       .set({
+        fullContentHtml: fullContentHtml,
         aiSummary: aiResult.summary,
         aiTakeaways: aiResult.keyTakeaways,
         tags: Array.from(new Set([...item.tags, ...aiResult.suggestedTags])),
