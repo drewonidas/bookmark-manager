@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import * as cheerio from 'cheerio';
 import { env } from '../config/env.js';
 
 export interface AISummaryResult {
@@ -17,18 +18,38 @@ export async function generateBookmarkSynthesis(params: {
   excerpt?: string;
   content?: string;
 }): Promise<AISummaryResult | null> {
+  const plainContent = params.content
+    ? cheerio.load(params.content).text().replace(/\s+/g, ' ').trim()
+    : '';
+  const cleanExcerpt = (params.excerpt || '').replace(/\s+/g, ' ').trim();
+
   const buildFallbackSynthesis = (): AISummaryResult => {
-    const cleanExcerpt = (params.excerpt || params.title).replace(/\s+/g, ' ').trim();
+    const baseText = plainContent || cleanExcerpt;
+    const sentences = baseText
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 20);
+
+    const summary =
+      sentences.slice(0, 3).join(' ') ||
+      cleanExcerpt ||
+      `Summary for "${params.title}". Open the source link to view the full media or page content.`;
+
+    const takeaways: string[] = [];
+    if (sentences.length > 0) {
+      for (const s of sentences.slice(0, 3)) {
+        takeaways.push(s.length > 160 ? s.slice(0, 157) + '...' : s);
+      }
+    } else if (cleanExcerpt) {
+      takeaways.push(cleanExcerpt);
+    } else {
+      takeaways.push(`Saved from source titled "${params.title}".`);
+    }
+
     return {
-      summary: cleanExcerpt.length > 30
-        ? cleanExcerpt
-        : `Editorial synthesis of "${params.title}", highlighting its primary arguments and structural insights.`,
-      keyTakeaways: [
-        `Core premise centered on ${params.title}.`,
-        cleanExcerpt.slice(0, 140) + (cleanExcerpt.length > 140 ? '...' : ''),
-        'Saved for deliberate reading and long-term archival reference.',
-      ],
-      suggestedTags: ['#editorial', '#deep-reading'],
+      summary,
+      keyTakeaways: takeaways,
+      suggestedTags: ['#saved'],
     };
   };
 
@@ -36,11 +57,11 @@ export async function generateBookmarkSynthesis(params: {
     return buildFallbackSynthesis();
   }
 
-  const textToAnalyze = params.content?.slice(0, 15000) || params.excerpt || params.title;
+  const textToAnalyze = (plainContent || cleanExcerpt || params.title).slice(0, 15000);
 
   try {
-    const prompt = `You are an editorial reading assistant for a high-craft bookmark sanctuary.
-Analyze the following article content:
+    const prompt = `You are an editorial reading assistant for a bookmark manager.
+Analyze the following saved link content:
 
 TITLE: ${params.title}
 CONTENT:
@@ -48,8 +69,8 @@ ${textToAnalyze}
 
 Please output a strictly valid JSON object with the following fields:
 {
-  "summary": "A concise 2-3 sentence editorial summary capturing the core premise.",
-  "keyTakeaways": ["Key takeaway point 1", "Key takeaway point 2", "Key takeaway point 3"],
+  "summary": "A concise 2-3 sentence summary capturing what this link is about.",
+  "keyTakeaways": ["Key point 1", "Key point 2", "Key point 3"],
   "suggestedTags": ["#topic1", "#topic2", "#topic3"]
 }
 Do not enclose in markdown code fences. Output only valid JSON.`;
@@ -62,7 +83,6 @@ Do not enclose in markdown code fences. Output only valid JSON.`;
     const outputText = response.output_text?.trim();
     if (!outputText) return buildFallbackSynthesis();
 
-    // Clean any accidental markdown fence
     const cleanJson = outputText.replace(/^```(json)?/i, '').replace(/```$/, '').trim();
     const parsed = JSON.parse(cleanJson);
 
@@ -74,7 +94,7 @@ Do not enclose in markdown code fences. Output only valid JSON.`;
         : [],
     };
   } catch (error) {
-    console.error('Gemini synthesis error, using editorial fallback:', error);
+    console.error('Gemini synthesis error, using fallback:', error);
     return buildFallbackSynthesis();
   }
 }
