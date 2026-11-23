@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/bookmark-manager/backend
+  repository: ghcr.io/drewonidas/backend
   # Pin to an immutable sha-<short> tag for production deploys.
   tag: latest
   pullPolicy: IfNotPresent
