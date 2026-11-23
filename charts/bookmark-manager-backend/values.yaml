@@ -2,8 +2,9 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/drewonidas/backend
-  # Pin to an immutable sha-<short> tag for production deploys.
-  tag: latest
+  # Workflow publishes branch tag (main) and immutable sha-<short> tags.
+  # Pin to a sha-<short> tag for reproducible deploys.
+  tag: main
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
