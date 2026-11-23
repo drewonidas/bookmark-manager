@@ -1,0 +1,6 @@
+apiVersion: v2
+name: bookmark-manager-backend
+description: Fastify backend for Bookmarks Editorial Sanctuary, with a bundled PostgreSQL instance
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

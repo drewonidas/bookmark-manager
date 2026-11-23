@@ -1,0 +1,49 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/bookmark-manager/backend
+  # Pin to an immutable sha-<short> tag for production deploys.
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - ghcr-pull-secret
+
+service:
+  type: ClusterIP
+  port: 3001
+
+ingress:
+  enabled: true
+  className: nginx
+  host: api.bookmark.local
+
+app:
+  # Bearer token required by the API (Authorization: Bearer <token>).
+  authToken: sanctuary-secret-token-change-me
+  # URL the UI is served from; used for CORS.
+  corsOrigin: http://bookmark.local
+  # Optional; empty disables Gemini AI enrichment.
+  geminiApiKey: ""
+
+postgres:
+  user: bookmark_user
+  password: bookmark_secret
+  database: bookmark_sanctuary
+  storage: 1Gi
+
+resources:
+  backend:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  postgres:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

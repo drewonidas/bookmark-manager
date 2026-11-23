@@ -1,0 +1,13 @@
+The backend has been deployed.
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+API: http://{{ .Values.ingress.host }}/ (via ingress, /health for checks)
+Auth header: Authorization: Bearer <AUTH_TOKEN from values.app.authToken>
+
+PostgreSQL: {{ .Release.Name }}-postgres:5432/{{ .Values.postgres.database }} (StatefulSet with a PVC; single instance, not HA)
+Credentials come from the {{ .Release.Name }}-app-secret and {{ .Release.Name }}-postgres-secret secrets.
+
+For UI access from minikube, resolve the ingress host to the minikube IP
+(`minikube ip`) in /etc/hosts or via the ingress-dns addon.
